@@ -3,7 +3,8 @@ import { Button, Container, Typography, Box } from "@mui/material";
 import MicIcon from "@mui/icons-material/Mic";
 import WaveSurfer from "wavesurfer.js";
 
-const App = () => {
+const App = () => 
+  {
   const [transcript, setTranscript] = useState("");
   const [interimTranscript, setInterimTranscript] = useState("");
   const [isRecording, setIsRecording] = useState(false);
@@ -15,6 +16,9 @@ const App = () => {
   const analyserRef = useRef(null);
   const dataArrayRef = useRef(null);
   const amplitudeRef = useRef(0);
+  const [finalTranscriptHTML, setFinalTranscriptHTML] = useState("");
+  const [interimTranscriptHTML, setInterimTranscriptHTML] = useState("");
+
 
   useEffect(() => {
     if (!waveSurferRef.current) {
@@ -82,29 +86,27 @@ const App = () => {
     recognition.onresult = (event) => {
       let interimText = "";
       let finalText = "";
-
+    
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcriptResult = event.results[i][0].transcript;
-
-        // 認識時点の振幅を取得
+    
         analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
         const maxAmplitude = Math.max(
           ...dataArrayRef.current.map((val) => Math.abs(val - 128))
         );
         const currentFontSize = 16 + (maxAmplitude / 128) * 32;
-
+    
         if (event.results[i].isFinal) {
-          // 最終結果の場合
           finalText += `<span style="font-size: ${currentFontSize}px;">${transcriptResult}</span>`;
         } else {
-          // 中間結果の場合
           interimText += `<span style="font-size: ${currentFontSize}px;">${transcriptResult}</span>`;
         }
       }
-
-      setInterimTranscript(interimText);
-      setTranscript((prevTranscript) => prevTranscript + finalText);
+    
+      setInterimTranscriptHTML(interimText);
+      setFinalTranscriptHTML((prev) => prev + finalText);
     };
+    
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
@@ -174,7 +176,7 @@ const App = () => {
           <Typography
             variant="body1"
             style={{ transition: "font-size 0.2s" }}
-            dangerouslySetInnerHTML={{ __html: transcript + interimTranscript }}
+            dangerouslySetInnerHTML={{ __html: finalTranscriptHTML + interimTranscriptHTML }}
           />
         </Box>
         <Box sx={{ mt: 4 }}>
@@ -195,4 +197,4 @@ const App = () => {
   );
 };
 
-export default App;
+export default App; 
