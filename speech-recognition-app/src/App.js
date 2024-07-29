@@ -1,10 +1,11 @@
-import React, { useState, useRef, useEffect } from 'react';
-import { Button, Container, Typography, Box } from '@mui/material';
-import MicIcon from '@mui/icons-material/Mic';
-import WaveSurfer from 'wavesurfer.js';
+import React, { useState, useRef, useEffect } from "react";
+import { Button, Container, Typography, Box } from "@mui/material";
+import MicIcon from "@mui/icons-material/Mic";
+import WaveSurfer from "wavesurfer.js";
 
 const App = () => {
-  const [transcript, setTranscript] = useState('');
+  const [transcript, setTranscript] = useState("");
+  const [interimTranscript, setInterimTranscript] = useState("");
   const [isRecording, setIsRecording] = useState(false);
   const waveSurferRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -18,38 +19,44 @@ const App = () => {
   useEffect(() => {
     if (!waveSurferRef.current) {
       waveSurferRef.current = WaveSurfer.create({
-        container: '#waveform',
-        waveColor: 'red',
-        progressColor: 'purple',
+        container: "#waveform",
+        waveColor: "red",
+        progressColor: "purple",
       });
     }
   }, []);
 
   useEffect(() => {
-    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-      const audioContext = new (window.AudioContext || window.webkitAudioContext)();
-      const analyser = audioContext.createAnalyser();
-      const source = audioContext.createMediaStreamSource(stream);
-      source.connect(analyser);
-      analyser.fftSize = 256;
-      const bufferLength = analyser.frequencyBinCount;
-      const dataArray = new Uint8Array(bufferLength);
+    navigator.mediaDevices
+      .getUserMedia({ audio: true })
+      .then((stream) => {
+        const audioContext = new (window.AudioContext ||
+          window.webkitAudioContext)();
+        const analyser = audioContext.createAnalyser();
+        const source = audioContext.createMediaStreamSource(stream);
+        source.connect(analyser);
+        analyser.fftSize = 256;
+        const bufferLength = analyser.frequencyBinCount;
+        const dataArray = new Uint8Array(bufferLength);
 
-      audioContextRef.current = audioContext;
-      analyserRef.current = analyser;
-      dataArrayRef.current = dataArray;
+        audioContextRef.current = audioContext;
+        analyserRef.current = analyser;
+        dataArrayRef.current = dataArray;
 
-      const updateAmplitude = () => {
-        analyser.getByteTimeDomainData(dataArray);
-        const maxAmplitude = Math.max(...dataArray.map(val => Math.abs(val - 128)));
-        amplitudeRef.current = maxAmplitude;
-        requestAnimationFrame(updateAmplitude);
-      };
+        const updateAmplitude = () => {
+          analyser.getByteTimeDomainData(dataArray);
+          const maxAmplitude = Math.max(
+            ...dataArray.map((val) => Math.abs(val - 128))
+          );
+          amplitudeRef.current = maxAmplitude;
+          requestAnimationFrame(updateAmplitude);
+        };
 
-      updateAmplitude();
-    }).catch((err) => {
-      console.error('Error accessing audio:', err);
-    });
+        updateAmplitude();
+      })
+      .catch((err) => {
+        console.error("Error accessing audio:", err);
+      });
   }, []);
 
   const handleStopRecording = () => {
@@ -65,30 +72,42 @@ const App = () => {
   const handleStartRecording = () => {
     audioChunks.current = [];
 
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition =
+      window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
-    recognition.lang = 'ja-JP';
+    recognition.lang = "ja-JP";
     recognition.continuous = true;
     recognition.interimResults = true;
 
     recognition.onresult = (event) => {
-      let newTranscript = ''; // 新しい文字起こしの部分を一時的に保持
+      let interimText = "";
+      let finalText = "";
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcriptResult = event.results[i][0].transcript;
 
         // 認識時点の振幅を取得
         analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
-        const maxAmplitude = Math.max(...dataArrayRef.current.map(val => Math.abs(val - 128)));
+        const maxAmplitude = Math.max(
+          ...dataArrayRef.current.map((val) => Math.abs(val - 128))
+        );
         const currentFontSize = 16 + (maxAmplitude / 128) * 32;
 
-        // 新しいテキストに振幅に基づくフォントサイズを適用
-        newTranscript += `<span style="font-size: ${currentFontSize}px;">${transcriptResult}</span>`;
+        if (event.results[i].isFinal) {
+          // 最終結果の場合
+          finalText += `<span style="font-size: ${currentFontSize}px;">${transcriptResult}</span>`;
+        } else {
+          // 中間結果の場合
+          interimText += `<span style="font-size: ${currentFontSize}px;">${transcriptResult}</span>`;
+        }
       }
-      setTranscript(prevTranscript => prevTranscript + newTranscript); // 新しいテキストを既存の文字起こしに追加
+
+      setInterimTranscript(interimText);
+      setTranscript((prevTranscript) => prevTranscript + finalText);
     };
 
     recognition.onerror = (event) => {
-      console.error('Speech recognition error:', event.error);
+      console.error("Speech recognition error:", event.error);
     };
 
     recognitionRef.current = recognition;
@@ -103,7 +122,7 @@ const App = () => {
       };
 
       mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks.current, { type: 'audio/wav' });
+        const audioBlob = new Blob(audioChunks.current, { type: "audio/wav" });
         const audioUrl = URL.createObjectURL(audioBlob);
         waveSurferRef.current.load(audioUrl);
       };
@@ -115,15 +134,21 @@ const App = () => {
 
   useEffect(() => {
     if (isRecording) {
-      console.log('Recording started');
+      console.log("Recording started");
     } else {
-      console.log('Recording stopped');
+      console.log("Recording stopped");
     }
   }, [isRecording]);
 
   return (
     <Container>
-      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100vh">
+      <Box
+        display="flex"
+        flexDirection="column"
+        alignItems="center"
+        justifyContent="center"
+        height="100vh"
+      >
         <Typography variant="h4">Voice Recognition App</Typography>
         <Button
           variant="contained"
@@ -148,17 +173,22 @@ const App = () => {
           <Typography variant="h6">Transcription:</Typography>
           <Typography
             variant="body1"
-            style={{ transition: 'font-size 0.2s' }}
-            dangerouslySetInnerHTML={{ __html: transcript }}
+            style={{ transition: "font-size 0.2s" }}
+            dangerouslySetInnerHTML={{ __html: transcript + interimTranscript }}
           />
         </Box>
         <Box sx={{ mt: 4 }}>
           <Typography variant="h6">Amplitude:</Typography>
-          <Typography variant="body1" style={{ fontSize: '24px', color: 'red' }}>{amplitudeRef.current.toFixed(2)}</Typography>
+          <Typography
+            variant="body1"
+            style={{ fontSize: "24px", color: "red" }}
+          >
+            {amplitudeRef.current.toFixed(2)}
+          </Typography>
         </Box>
-        <Box sx={{ mt: 4, width: '100%' }}>
+        <Box sx={{ mt: 4, width: "100%" }}>
           <Typography variant="h6">Waveform:</Typography>
-          <div id="waveform" style={{ width: '100%', height: '200px' }}></div>
+          <div id="waveform" style={{ width: "100%", height: "200px" }}></div>
         </Box>
       </Box>
     </Container>
