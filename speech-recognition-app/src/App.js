@@ -2,11 +2,10 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button, Container, Typography, Box } from "@mui/material";
 import MicIcon from "@mui/icons-material/Mic";
 import WaveSurfer from "wavesurfer.js";
+import { RecoilRoot, atom, useRecoilState } from "recoil";
+import { currentFontSize } from "./atom.js";
 
-const App = () => 
-  {
-  const [transcript, setTranscript] = useState("");
-  const [interimTranscript, setInterimTranscript] = useState("");
+const App = () => {
   const [isRecording, setIsRecording] = useState(false);
   const waveSurferRef = useRef(null);
   const mediaRecorderRef = useRef(null);
@@ -18,7 +17,8 @@ const App = () =>
   const amplitudeRef = useRef(0);
   const [finalTranscriptHTML, setFinalTranscriptHTML] = useState("");
   const [interimTranscriptHTML, setInterimTranscriptHTML] = useState("");
-
+  const [fontSize, setFontSize] = useRecoilState(currentFontSize);
+  const maxFontSizeRef = useRef(0); // 各セッションごとの最大フォントサイズ
 
   useEffect(() => {
     if (!waveSurferRef.current) {
@@ -34,8 +34,7 @@ const App = () =>
     navigator.mediaDevices
       .getUserMedia({ audio: true })
       .then((stream) => {
-        const audioContext = new (window.AudioContext ||
-          window.webkitAudioContext)();
+        const audioContext = new (window.AudioContext || window.webkitAudioContext)();
         const analyser = audioContext.createAnalyser();
         const source = audioContext.createMediaStreamSource(stream);
         source.connect(analyser);
@@ -49,9 +48,7 @@ const App = () =>
 
         const updateAmplitude = () => {
           analyser.getByteTimeDomainData(dataArray);
-          const maxAmplitude = Math.max(
-            ...dataArray.map((val) => Math.abs(val - 128))
-          );
+          const maxAmplitude = Math.max(...dataArray.map((val) => Math.abs(val - 128)));
           amplitudeRef.current = maxAmplitude;
           requestAnimationFrame(updateAmplitude);
         };
@@ -75,9 +72,9 @@ const App = () =>
 
   const handleStartRecording = () => {
     audioChunks.current = [];
+    maxFontSizeRef.current = 0; // セッションごとに最大フォントサイズをリセット
 
-    const SpeechRecognition =
-      window.SpeechRecognition || window.webkitSpeechRecognition;
+    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
     const recognition = new SpeechRecognition();
     recognition.lang = "ja-JP";
     recognition.continuous = true;
@@ -86,27 +83,32 @@ const App = () =>
     recognition.onresult = (event) => {
       let interimText = "";
       let finalText = "";
-    
+
       for (let i = event.resultIndex; i < event.results.length; i++) {
         const transcriptResult = event.results[i][0].transcript;
-    
+
+        // 各音声入力でフォントサイズを変更し、最大サイズを追跡
         analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
-        const maxAmplitude = Math.max(
-          ...dataArrayRef.current.map((val) => Math.abs(val - 128))
-        );
-        const currentFontSize = 16 + (maxAmplitude / 128) * 32;
-    
+        const maxAmplitude = Math.max(...dataArrayRef.current.map((val) => Math.abs(val - 128)));
+
+        const curryFontSize = 16 + (maxAmplitude / 64) * 32;
+        setFontSize(curryFontSize);
+
+        // 最大フォントサイズを更新
+        if (curryFontSize > maxFontSizeRef.current) {
+          maxFontSizeRef.current = curryFontSize;
+        }
+
         if (event.results[i].isFinal) {
-          finalText += `<span style="font-size: ${currentFontSize}px;">${transcriptResult}</span>`;
+          finalText += `<span style="font-size: ${maxFontSizeRef.current}px;">${transcriptResult}</span>`;
         } else {
-          interimText += `<span style="font-size: ${currentFontSize}px;">${transcriptResult}</span>`;
+          interimText += `<span style="font-size: ${curryFontSize}px;">${transcriptResult}</span>`;
         }
       }
-    
+
       setInterimTranscriptHTML(interimText);
       setFinalTranscriptHTML((prev) => prev + finalText);
     };
-    
 
     recognition.onerror = (event) => {
       console.error("Speech recognition error:", event.error);
@@ -144,13 +146,7 @@ const App = () =>
 
   return (
     <Container>
-      <Box
-        display="flex"
-        flexDirection="column"
-        alignItems="center"
-        justifyContent="center"
-        height="100vh"
-      >
+      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100vh">
         <Typography variant="h4">Voice Recognition App</Typography>
         <Button
           variant="contained"
@@ -181,10 +177,7 @@ const App = () =>
         </Box>
         <Box sx={{ mt: 4 }}>
           <Typography variant="h6">Amplitude:</Typography>
-          <Typography
-            variant="body1"
-            style={{ fontSize: "24px", color: "red" }}
-          >
+          <Typography variant="body1" style={{ fontSize: "24px", color: "red" }}>
             {amplitudeRef.current.toFixed(2)}
           </Typography>
         </Box>
@@ -197,4 +190,4 @@ const App = () =>
   );
 };
 
-export default App; 
+export default App;
