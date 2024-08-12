@@ -2,7 +2,7 @@ import React, { useState, useRef, useEffect } from "react";
 import { Button, Container, Typography, Box } from "@mui/material";
 import MicIcon from "@mui/icons-material/Mic";
 import WaveSurfer from "wavesurfer.js";
-import { RecoilRoot, atom, useRecoilState } from "recoil";
+import { useRecoilState } from "recoil";
 import { currentFontSize } from "./atom.js";
 
 const App = () => {
@@ -19,6 +19,7 @@ const App = () => {
   const [interimTranscriptHTML, setInterimTranscriptHTML] = useState("");
   const [fontSize, setFontSize] = useRecoilState(currentFontSize);
   const maxFontSizeRef = useRef(0); // 各セッションごとの最大フォントサイズ
+  const canvasRef = useRef(null);
 
   useEffect(() => {
     if (!waveSurferRef.current) {
@@ -38,7 +39,7 @@ const App = () => {
         const analyser = audioContext.createAnalyser();
         const source = audioContext.createMediaStreamSource(stream);
         source.connect(analyser);
-        analyser.fftSize = 256;
+        analyser.fftSize = 1024; // スペクトログラム用にFFTサイズを大きく設定
         const bufferLength = analyser.frequencyBinCount;
         const dataArray = new Uint8Array(bufferLength);
 
@@ -46,14 +47,35 @@ const App = () => {
         analyserRef.current = analyser;
         dataArrayRef.current = dataArray;
 
-        const updateAmplitude = () => {
-          analyser.getByteTimeDomainData(dataArray);
-          const maxAmplitude = Math.max(...dataArray.map((val) => Math.abs(val - 128)));
-          amplitudeRef.current = maxAmplitude;
-          requestAnimationFrame(updateAmplitude);
+        const drawSpectrogram = () => {
+          const canvas = canvasRef.current;
+          if (canvas) {
+            const canvasCtx = canvas.getContext("2d");
+            const width = canvas.width;
+            const height = canvas.height;
+            const sliceWidth = width / bufferLength;
+            
+            analyser.getByteFrequencyData(dataArray);
+
+            // スペクトログラムのシフト
+            const imageData = canvasCtx.getImageData(0, 0, width, height);
+            canvasCtx.putImageData(imageData, -sliceWidth, 0);
+            canvasCtx.clearRect(width - sliceWidth, 0, sliceWidth, height);
+
+            // 新しいデータを描画
+            for (let i = 0; i < bufferLength; i++) {
+              const value = dataArray[i];
+              const percent = value / 256;
+              const y = Math.floor(percent * height);
+              const color = `rgb(${value}, ${value}, ${255 - value})`;
+              canvasCtx.fillStyle = color;
+              canvasCtx.fillRect(width - sliceWidth, height - y, sliceWidth, y);
+            }
+          }
+          requestAnimationFrame(drawSpectrogram);
         };
 
-        updateAmplitude();
+        drawSpectrogram();
       })
       .catch((err) => {
         console.error("Error accessing audio:", err);
@@ -101,6 +123,7 @@ const App = () => {
 
         if (event.results[i].isFinal) {
           finalText += `<span style="font-size: ${maxFontSizeRef.current}px;">${transcriptResult}</span>`;
+          maxFontSizeRef.current = 0; // セッションごとに最大フォントサイズをリセット
         } else {
           interimText += `<span style="font-size: ${curryFontSize}px;">${transcriptResult}</span>`;
         }
@@ -146,7 +169,14 @@ const App = () => {
 
   return (
     <Container>
-      <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" height="100vh">
+      <Box 
+        display="flex" 
+        flexDirection="column" 
+        alignItems="center" 
+        justifyContent="center" 
+        height="100vh"
+        sx={{ overflowY: 'auto', padding: '20px' }} // スクロール可能にするためのスタイル
+      >
         <Typography variant="h4">Voice Recognition App</Typography>
         <Button
           variant="contained"
@@ -184,6 +214,10 @@ const App = () => {
         <Box sx={{ mt: 4, width: "100%" }}>
           <Typography variant="h6">Waveform:</Typography>
           <div id="waveform" style={{ width: "100%", height: "200px" }}></div>
+        </Box>
+        <Box sx={{ mt: 4, width: "100%", height: "200px" }}>
+          <Typography variant="h6">Spectrogram:</Typography>
+          <canvas ref={canvasRef} width="800" height="200" style={{ width: "100%", height: "200px", backgroundColor: "black" }} />
         </Box>
       </Box>
     </Container>
