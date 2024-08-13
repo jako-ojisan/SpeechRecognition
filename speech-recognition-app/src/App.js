@@ -1,6 +1,7 @@
 import React, { useState, useRef, useEffect } from "react";
 import { Button, Container, Typography, Box } from "@mui/material";
-import MicIcon from "@mui/icons-material/Mic";
+import PlayArrowIcon from "@mui/icons-material/PlayArrow";
+import PauseIcon from "@mui/icons-material/Pause";
 import WaveSurfer from "wavesurfer.js";
 import { useRecoilState } from "recoil";
 import { currentFontSize } from "./atom.js";
@@ -14,7 +15,7 @@ const App = () => {
   const audioContextRef = useRef(null);
   const analyserRef = useRef(null);
   const dataArrayRef = useRef(null);
-  const [amplitude, setAmplitude] = useState(0); // amplitude のステートを追加
+  const [amplitude, setAmplitude] = useState(0);
   const [finalTranscriptHTML, setFinalTranscriptHTML] = useState("");
   const [interimTranscriptHTML, setInterimTranscriptHTML] = useState("");
   const [fontSize, setFontSize] = useRecoilState(currentFontSize);
@@ -26,8 +27,8 @@ const App = () => {
     if (!waveSurferRef.current) {
       waveSurferRef.current = WaveSurfer.create({
         container: "#waveform",
-        waveColor: "#00BFFF", // 空色に変更
-        progressColor: "#87CEFA", // 空色の別のトーンに変更
+        waveColor: "#87CEEB",
+        progressColor: "#ADD8E6",
         backgroundColor: "black",
       });
     }
@@ -67,7 +68,7 @@ const App = () => {
               const value = dataArray[i];
               const percent = value / 256;
               const y = Math.floor(percent * height);
-              const color = `rgb(0, ${value}, 255)`; // 空色ベースに変更
+              const color = `rgb(135, ${value}, 235)`;
               canvasCtx.fillStyle = color;
               canvasCtx.fillRect(width - sliceWidth, height - y, sliceWidth, y);
             }
@@ -91,7 +92,7 @@ const App = () => {
               const value = dataArray[i];
               const percent = value / 256;
               const barHeight = percent * height;
-              const color = `rgb(0, ${value}, 255)`; // 空色ベースに変更
+              const color = `rgb(135, ${value}, 235)`;
               canvasCtx.fillStyle = color;
               canvasCtx.fillRect(i * barWidth, height - barHeight, barWidth, barHeight);
             }
@@ -102,92 +103,92 @@ const App = () => {
         const updateAmplitude = () => {
           analyser.getByteTimeDomainData(dataArray);
           const maxAmplitude = Math.max(...dataArray.map((val) => Math.abs(val - 128)));
-          setAmplitude(maxAmplitude / 128); // amplitude の更新
+          setAmplitude(maxAmplitude / 128);
           requestAnimationFrame(updateAmplitude);
         };
 
         drawSpectrogram();
         drawBarChart();
-        updateAmplitude(); // amplitude の更新を開始
+        updateAmplitude();
       })
       .catch((err) => {
         console.error("Error accessing audio:", err);
       });
   }, []);
 
-  const handleStopRecording = () => {
-    if (mediaRecorderRef.current) {
-      mediaRecorderRef.current.stop();
-    }
-    if (recognitionRef.current) {
-      recognitionRef.current.stop();
-    }
-    setIsRecording(false);
-  };
-
-  const handleStartRecording = () => {
-    audioChunks.current = [];
-    maxFontSizeRef.current = 0;
-
-    const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-    const recognition = new SpeechRecognition();
-    recognition.lang = "ja-JP";
-    recognition.continuous = true;
-    recognition.interimResults = true;
-
-    recognition.onresult = (event) => {
-      let interimText = "";
-      let finalText = "";
-
-      for (let i = event.resultIndex; i < event.results.length; i++) {
-        const transcriptResult = event.results[i][0].transcript;
-
-        analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
-        const maxAmplitude = Math.max(...dataArrayRef.current.map((val) => Math.abs(val - 128)));
-
-        const curryFontSize = 16 + (maxAmplitude / 64) * 32;
-        setFontSize(curryFontSize);
-
-        if (curryFontSize > maxFontSizeRef.current) {
-          maxFontSizeRef.current = curryFontSize;
-        }
-
-        if (event.results[i].isFinal) {
-          finalText += `<span style="font-size: ${maxFontSizeRef.current}px; color: #FFDAB9;">${transcriptResult}</span>`; // 温白色のテキスト
-          maxFontSizeRef.current = 0;
-        } else {
-          interimText += `<span style="font-size: ${curryFontSize}px; color: #FFDAB9;">${transcriptResult}</span>`; // 温白色のテキスト
-        }
+  const toggleRecording = () => {
+    if (isRecording) {
+      if (mediaRecorderRef.current) {
+        mediaRecorderRef.current.stop();
       }
+      if (recognitionRef.current) {
+        recognitionRef.current.stop();
+      }
+      setIsRecording(false);
+    } else {
+      audioChunks.current = [];
+      maxFontSizeRef.current = 0;
 
-      setInterimTranscriptHTML(interimText);
-      setFinalTranscriptHTML((prev) => prev + finalText);
-    };
+      const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+      const recognition = new SpeechRecognition();
+      recognition.lang = "ja-JP";
+      recognition.continuous = true;
+      recognition.interimResults = true;
 
-    recognition.onerror = (event) => {
-      console.error("Speech recognition error:", event.error);
-    };
+      recognition.onresult = (event) => {
+        let interimText = "";
+        let finalText = "";
 
-    recognitionRef.current = recognition;
-    recognition.start();
+        for (let i = event.resultIndex; i < event.results.length; i++) {
+          const transcriptResult = event.results[i][0].transcript;
 
-    navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
-      const mediaRecorder = new MediaRecorder(stream);
-      mediaRecorderRef.current = mediaRecorder;
+          analyserRef.current.getByteTimeDomainData(dataArrayRef.current);
+          const maxAmplitude = Math.max(...dataArrayRef.current.map((val) => Math.abs(val - 128)));
 
-      mediaRecorder.ondataavailable = (event) => {
-        audioChunks.current.push(event.data);
+          const curryFontSize = 16 + (maxAmplitude / 64) * 32;
+          setFontSize(curryFontSize);
+
+          if (curryFontSize > maxFontSizeRef.current) {
+            maxFontSizeRef.current = curryFontSize;
+          }
+
+          if (event.results[i].isFinal) {
+            finalText += `<span style="font-size: ${maxFontSizeRef.current}px; color: #FFDAB9;">${transcriptResult}</span>`;
+            maxFontSizeRef.current = 0;
+          } else {
+            interimText += `<span style="font-size: ${curryFontSize}px; color: #FFDAB9;">${transcriptResult}</span>`;
+          }
+        }
+
+        setInterimTranscriptHTML(interimText);
+        setFinalTranscriptHTML((prev) => prev + finalText);
       };
 
-      mediaRecorder.onstop = () => {
-        const audioBlob = new Blob(audioChunks.current, { type: "audio/wav" });
-        const audioUrl = URL.createObjectURL(audioBlob);
-        waveSurferRef.current.load(audioUrl);
+      recognition.onerror = (event) => {
+        console.error("Speech recognition error:", event.error);
       };
 
-      mediaRecorder.start();
-      setIsRecording(true);
-    });
+      recognitionRef.current = recognition;
+      recognition.start();
+
+      navigator.mediaDevices.getUserMedia({ audio: true }).then((stream) => {
+        const mediaRecorder = new MediaRecorder(stream);
+        mediaRecorderRef.current = mediaRecorder;
+
+        mediaRecorder.ondataavailable = (event) => {
+          audioChunks.current.push(event.data);
+        };
+
+        mediaRecorder.onstop = () => {
+          const audioBlob = new Blob(audioChunks.current, { type: "audio/wav" });
+          const audioUrl = URL.createObjectURL(audioBlob);
+          waveSurferRef.current.load(audioUrl);
+        };
+
+        mediaRecorder.start();
+        setIsRecording(true);
+      });
+    }
   };
 
   useEffect(() => {
@@ -201,81 +202,129 @@ const App = () => {
   return (
     <Container
       sx={{
-        backgroundColor: "#191414", // 黒に近い背景色
-        color: "white", // 白いテキスト
-        paddingTop: "20px",
-        paddingBottom: "20px",
+        backgroundColor: "#191414",
+        color: "white",
+        paddingTop: "1%",
+        paddingBottom: "10%", // ボックスのために余白を多めに設定
+        position: "relative",
+        top: "-7%",
+        overflowX: "hidden",
       }}
     >
       <Box 
         display="flex" 
         flexDirection="column" 
-        alignItems="center" 
+        alignItems="flex-start"
         justifyContent="center" 
         sx={{ 
           height: "100%", 
-          padding: '60px',  
+          padding: '3%', 
+          overflowX: "hidden",
           overflowY: 'auto' 
         }} 
       >
-        <Typography variant="h4" sx={{ color: "#00BFFF" }}>Voice Recognition App</Typography>
-        <Box sx={{ mt: 3, display: 'flex', justifyContent: 'center' }}>
-          <Button
-            variant="contained"
-            onClick={handleStartRecording}
-            disabled={isRecording}
+        <Box sx={{ width: "100%", marginBottom: "1%" }}>
+          <Typography variant="h6" sx={{ color: "#87CEEB" }}>Transcription:</Typography>
+          <Box
             sx={{
-              mr: 2,
-              backgroundColor: "#00BFFF", // 空色のボタン
-              "&:hover": {
-                backgroundColor: "#87CEFA", // ホバー時の色を調整
-              },
-            }}
-            startIcon={<MicIcon />}
-          >
-            Start Recording
-          </Button>
-          <Button
-            variant="contained"
-            onClick={handleStopRecording}
-            disabled={!isRecording}
-            sx={{
-              backgroundColor: "#00BFFF", // 空色のボタン
-              "&:hover": {
-                backgroundColor: "#87CEFA", // ホバー時の色を調整
-              },
+              height: "150px",
+              overflowY: "auto",
+              border: "0.2em solid #87CEEB",
+              padding: "1%",
+              width: "100%",
+              marginBottom: "0.5%"
             }}
           >
-            Stop Recording
-          </Button>
+            <Typography
+              variant="body1"
+              style={{ transition: "font-size 0.2s", color: "#FFDAB9" }}
+              dangerouslySetInnerHTML={{ __html: finalTranscriptHTML + interimTranscriptHTML }}
+            />
+          </Box>
         </Box>
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" sx={{ color: "#00BFFF" }}>Transcription:</Typography>
-          <Typography
-            variant="body1"
-            style={{ transition: "font-size 0.2s", color: "#FFDAB9" }} // 温白色のテキスト
-            dangerouslySetInnerHTML={{ __html: finalTranscriptHTML + interimTranscriptHTML }}
-          />
+        <Box sx={{ width: "100%" }}>
+          <Typography variant="h6" sx={{ color: "#87CEEB" }}>Waveform:</Typography>
+          <div id="waveform" style={{ width: "100%", height: "200px" }}></div>
         </Box>
-        <Box sx={{ mt: 4 }}>
-          <Typography variant="h6" sx={{ color: "#00BFFF" }}>Amplitude:</Typography>
-          <Typography variant="body1" style={{ fontSize: "24px", color: "#00BFFF" }}>
-            {amplitude.toFixed(2)} {/* amplitude を表示 */}
+        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', mt: '1%' }}>
+          <Box sx={{ height: '25%', width: '100%', marginBottom: "10%" }}>
+            <Typography variant="h6" sx={{ color: "#87CEEB" }}>Spectrogram:</Typography>
+            <canvas ref={canvasRef} style={{ width: "100%", height: "100%", backgroundColor: "black" }} />
+          </Box>
+          <Box sx={{ height: '25%', width: '100%' }}>
+            <Typography variant="h6" sx={{ color: "#87CEEB" }}>Bar Chart:</Typography>
+            <canvas ref={barChartCanvasRef} style={{ width: "100%", height: "100%", backgroundColor: "black" }} />
+          </Box>
+        </Box>
+      </Box>
+      <Box 
+        sx={{
+          position: "fixed",
+          bottom: 0,
+          left: 0,
+          width: "100%",
+          backgroundColor: "#282828",
+          padding: "0.5% 1%", // 上下左右の余白を小さくしてボックス全体の高さを縮小
+          display: "flex",
+          justifyContent: "center", // 中央揃え
+          alignItems: "center",
+        }}
+      >
+        <Box 
+          sx={{
+            border: "0.2em solid #87CEEB",
+            padding: "1% 2%", // 上下のパディングを小さくしてボックスの高さを縮小
+            borderRadius: "10px", 
+            fontSize: "1em", // テキストサイズを縮小
+            width: "25%", // 幅を少し縮小
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginRight: "1%", // 録音ボタンとの間隔を少し縮小
+          }}
+        >
+          <Typography variant="h6" sx={{ color: "#87CEEB", whiteSpace: "nowrap" }}>Font Size:</Typography>
+          <Typography variant="body1" sx={{ fontSize: "0.9em", color: "#87CEEB", ml: "5%" }}>
+            {fontSize.toFixed(2)} px
           </Typography>
         </Box>
-        <Box sx={{ mt: 4, display: 'flex', justifyContent: 'space-between', width: "100%" }}>
-          <Box sx={{ width: "49%", height: "100px" }}>
-            <Typography variant="h6" sx={{ color: "#00BFFF" }}>Spectrogram:</Typography>
-            <canvas ref={canvasRef} width="400" height="100" style={{ width: "100%", height: "100px", backgroundColor: "black" }} />
-          </Box>
-          <Box sx={{ width: "49%", height: "100px" }}>
-            <Typography variant="h6" sx={{ color: "#00BFFF" }}>Bar Chart:</Typography>
-            <canvas ref={barChartCanvasRef} width="400" height="100" style={{ width: "100%", height: "100px", backgroundColor: "black" }} />
-          </Box>
-        </Box>
-        <Box sx={{ mt: 4, width: "100%" }}>
-          <Typography variant="h6" sx={{ color: "#00BFFF" }}>Waveform:</Typography>
-          <div id="waveform" style={{ width: "100%", height: "200px" }}></div>
+        <Button
+          variant="contained"
+          onClick={toggleRecording}
+          sx={{
+            backgroundColor: isRecording ? "#FF7F7F" : "#87CEEB",
+            border: `0.2em solid ${isRecording ? "#FF7F7F" : "#87CEEB"}`,
+            width: "50px", // ボタンの幅を縮小
+            height: "50px", // ボタンの高さを縮小して完全な円形に
+            borderRadius: "50%",
+            "&:hover": {
+              backgroundColor: isRecording ? "#FF9999" : "#B0E0E6",
+            },
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            
+          }}
+        >
+          {isRecording ? <PauseIcon /> : <PlayArrowIcon />}
+        </Button>
+        <Box 
+          sx={{
+            border: "0.2em solid #87CEEB",
+            padding: "1% 2%", // 上下のパディングを小さくしてボックスの高さを縮小
+            borderRadius: "10px", 
+            fontSize: "1em", // テキストサイズを縮小
+            width: "25%", // 幅を少し縮小
+            display: "flex",
+            justifyContent: "space-between",
+            alignItems: "center",
+            marginLeft: "1%", // 録音ボタンとの間隔を少し縮小
+          }}
+        >
+          <Typography variant="h6" sx={{ color: "#87CEEB", whiteSpace: "nowrap" }}>Amplitude:</Typography>
+          <Typography variant="body1" sx={{ fontSize: "0.9em", color: "#87CEEB", ml: "5%" }}>
+            {amplitude.toFixed(2)}
+          </Typography>
         </Box>
       </Box>
     </Container>
@@ -283,3 +332,4 @@ const App = () => {
 };
 
 export default App;
+
