@@ -30,6 +30,8 @@ const App = () => {
         waveColor: "#87CEEB",
         progressColor: "#ADD8E6",
         backgroundColor: "black",
+        height: 80,
+        width: "100%",
       });
     }
   }, []);
@@ -201,16 +203,23 @@ const App = () => {
 
   return (
     <Container
+     maxWidth={false}
       sx={{
         backgroundColor: "#191414",
         color: "white",
-        paddingTop: "1%",
-        paddingBottom: "10%", // ボックスのために余白を多めに設定
+        paddingTop: "1%",  
+        paddingBottom: "10%",
         position: "relative",
-        top: "-7%",
+        top: "-8%",  
         overflowX: "hidden",
+        textAlign: "center",  
       }}
     >
+      {/* SONARタイトル */}
+      <Typography variant="h5" sx={{ color: "#00FFFF", marginBottom: "20px" }}>  {/* 蛍光色の青に設定 */}
+        SONAR
+      </Typography>
+
       <Box 
         display="flex" 
         flexDirection="column" 
@@ -220,19 +229,29 @@ const App = () => {
           height: "100%", 
           padding: '3%', 
           overflowX: "hidden",
-          overflowY: 'auto' 
+          textAlign: "left",  
         }} 
       >
-        <Box sx={{ width: "100%", marginBottom: "1%" }}>
-          <Typography variant="h6" sx={{ color: "#87CEEB" }}>Transcription:</Typography>
+        {/* 左側のTranscription */}
+        <Box 
+          sx={{ 
+            width: "55%",  
+            marginBottom: "1%", 
+            border: "0.2em solid #87CEEB", 
+            borderRadius: "10px", 
+            padding: "1%",
+            height: "400px",  
+            backgroundColor: "#282828", 
+            marginTop: "-2%",  
+          }}
+        > 
+          <Typography variant="h6" sx={{ color: "#87CEEB", marginBottom: "5px" }}>Transcription:</Typography>
           <Box
             sx={{
-              height: "150px",
+              height: "calc(100% - 32px)", 
               overflowY: "auto",
-              border: "0.2em solid #87CEEB",
               padding: "1%",
               width: "100%",
-              marginBottom: "0.5%"
             }}
           >
             <Typography
@@ -242,18 +261,47 @@ const App = () => {
             />
           </Box>
         </Box>
-        <Box sx={{ width: "100%" }}>
-          <Typography variant="h6" sx={{ color: "#87CEEB" }}>Waveform:</Typography>
-          <div id="waveform" style={{ width: "100%", height: "200px" }}></div>
-        </Box>
-        <Box sx={{ display: 'flex', flexDirection: 'column', width: '100%', mt: '1%' }}>
-          <Box sx={{ height: '25%', width: '100%', marginBottom: "10%" }}>
-            <Typography variant="h6" sx={{ color: "#87CEEB" }}>Spectrogram:</Typography>
-            <canvas ref={canvasRef} style={{ width: "100%", height: "100%", backgroundColor: "black" }} />
+
+        {/* 右側のSpectrogram, Bar Chart, Waveform */}
+        <Box sx={{ width: "50%", marginLeft: "auto", display: "flex", flexDirection: "column", alignItems: "flex-end", marginTop: "-420px" }}> {/* グループ全体を少し上に移動 */}
+          <Box 
+            sx={{ 
+              width: '60%', 
+              marginBottom: "2%", 
+              border: "0.2em solid #87CEEB", 
+              padding: "1%", 
+              borderRadius: "10px",
+              height: "120px", 
+            }}
+          >
+            <Typography variant="h6" sx={{ color: "#87CEEB", textAlign: 'left', marginBottom: "5px" }}>Spectrogram:</Typography>
+            <canvas ref={canvasRef} style={{ width: "100%", height: "80px", backgroundColor: "black" }} />
           </Box>
-          <Box sx={{ height: '25%', width: '100%' }}>
-            <Typography variant="h6" sx={{ color: "#87CEEB" }}>Bar Chart:</Typography>
-            <canvas ref={barChartCanvasRef} style={{ width: "100%", height: "100%", backgroundColor: "black" }} />
+          <Box 
+            sx={{ 
+              width: '60%', 
+              marginBottom: "2%", 
+              border: "0.2em solid #87CEEB", 
+              padding: "1%", 
+              borderRadius: "10px",
+              height: "120px", 
+            }}
+          >
+            <Typography variant="h6" sx={{ color: "#87CEEB", textAlign: 'left', marginBottom: "5px" }}>Bar Chart:</Typography>
+            <canvas ref={barChartCanvasRef} style={{ width: "100%", height: "80px", backgroundColor: "black" }} />
+          </Box>
+          <Box 
+            sx={{ 
+              width: '60%', 
+              marginBottom: "2%", 
+              border: "0.2em solid #87CEEB", 
+              padding: "1%", 
+              borderRadius: "10px",
+              height: "120px", 
+            }}
+          >
+            <Typography variant="h6" sx={{ color: "#87CEEB", textAlign: 'left', marginBottom: "5px" }}>Waveform:</Typography>
+            <div id="waveform" style={{ width: "100%", height: "80px" }}></div>
           </Box>
         </Box>
       </Box>
@@ -264,23 +312,23 @@ const App = () => {
           left: 0,
           width: "100%",
           backgroundColor: "#282828",
-          padding: "0.5% 1%", // 上下左右の余白を小さくしてボックス全体の高さを縮小
+          padding: "0.5% 1%", 
           display: "flex",
-          justifyContent: "center", // 中央揃え
+          justifyContent: "center", 
           alignItems: "center",
         }}
       >
         <Box 
           sx={{
             border: "0.2em solid #87CEEB",
-            padding: "1% 2%", // 上下のパディングを小さくしてボックスの高さを縮小
+            padding: "1% 2%", 
             borderRadius: "10px", 
-            fontSize: "1em", // テキストサイズを縮小
-            width: "25%", // 幅を少し縮小
+            fontSize: "1em", 
+            width: "25%", 
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginRight: "1%", // 録音ボタンとの間隔を少し縮小
+            marginRight: "1%", 
           }}
         >
           <Typography variant="h6" sx={{ color: "#87CEEB", whiteSpace: "nowrap" }}>Font Size:</Typography>
@@ -294,16 +342,19 @@ const App = () => {
           sx={{
             backgroundColor: isRecording ? "#FF7F7F" : "#87CEEB",
             border: `0.2em solid ${isRecording ? "#FF7F7F" : "#87CEEB"}`,
-            width: "50px", // ボタンの幅を縮小
-            height: "50px", // ボタンの高さを縮小して完全な円形に
-            borderRadius: "50%",
+            width: "50px", 
+            height: "50px",
+            minWidth: "50px", 
+            padding: 0, 
+            borderRadius: "50%", 
             "&:hover": {
               backgroundColor: isRecording ? "#FF9999" : "#B0E0E6",
             },
             display: 'flex',
             alignItems: 'center',
             justifyContent: 'center',
-            
+            marginLeft: "1%", 
+            marginRight: "1%", 
           }}
         >
           {isRecording ? <PauseIcon /> : <PlayArrowIcon />}
@@ -311,14 +362,14 @@ const App = () => {
         <Box 
           sx={{
             border: "0.2em solid #87CEEB",
-            padding: "1% 2%", // 上下のパディングを小さくしてボックスの高さを縮小
+            padding: "1% 2%", 
             borderRadius: "10px", 
-            fontSize: "1em", // テキストサイズを縮小
-            width: "25%", // 幅を少し縮小
+            fontSize: "1em", 
+            width: "25%", 
             display: "flex",
             justifyContent: "space-between",
             alignItems: "center",
-            marginLeft: "1%", // 録音ボタンとの間隔を少し縮小
+            marginLeft: "1%", 
           }}
         >
           <Typography variant="h6" sx={{ color: "#87CEEB", whiteSpace: "nowrap" }}>Amplitude:</Typography>
@@ -332,4 +383,3 @@ const App = () => {
 };
 
 export default App;
-
